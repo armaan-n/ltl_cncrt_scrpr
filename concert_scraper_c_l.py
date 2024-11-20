@@ -52,7 +52,7 @@ def create_driver():
     options.add_argument("--disable-gpu")
     options.page_load_strategy = 'eager'
 
-    service = Service('chromedriver-win64\\chromedriver.exe')
+    service = Service('chromedriver-linux64/chromedriver-linux64/chromedriver')
 
     driver = webdriver.Chrome(options=options, service=service)
     driver.implicitly_wait(20)
@@ -284,7 +284,7 @@ class ConcertScraper:
             if 'Messages' not in response:
                 break
 
-            link = response['Messages'][0]['Body']
+            city, state, country, link = response['Messages'][0]['Body'].split(',')
             receipt_handle = response['Messages'][0]['ReceiptHandle']
 
             print(f'getting {link}')
@@ -303,7 +303,7 @@ class ConcertScraper:
                 concert_elems = concert_elem.find_elements(by=By.TAG_NAME,
                                                            value='td')
 
-                concert_name, start_date, end_date, conc_bands, venue, city, state, country, link = self.scrape_concerts(
+                concert_name, start_date, end_date, conc_bands, venue, _, _, _, link = self.scrape_concerts(
                     concert_elems)
                 concert_names.append(concert_name)
                 start_dates.append(start_date)

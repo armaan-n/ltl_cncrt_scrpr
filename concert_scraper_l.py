@@ -11,8 +11,16 @@ from selenium.webdriver.support import expected_conditions as EC
 import boto3
 import os
 
-client = boto3.client('sqs')
-s3 = boto3.client('s3')
+client = boto3.client('sqs',
+                      region_name='us-east-1',
+                      aws_access_key_id=os.getenv('ACCESS_KEY', ''),
+                      aws_secret_access_key=os.getenv('SECRET_KEY', ''),
+                      aws_session_token=os.getenv('SESSION_TOKEN', ''))
+s3 = boto3.client('s3',
+                  region_name='us-east-1',
+                  aws_access_key_id=os.getenv('ACCESS_KEY', ''),
+                  aws_secret_access_key=os.getenv('SECRET_KEY', ''),
+                  aws_session_token=os.getenv('SESSION_TOKEN', ''))
 
 threads = []
 init_time = datetime.datetime.now()

@@ -63,11 +63,11 @@ def create_driver():
 
 
 def safe_get(thread_id, driver, wait, link, field):
-    tries = 0
+    tries = 1
 
     while True:
-        if tries & 3 == 0:
-            sleep(60)
+        if tries % 4 == 0:
+            sleep(300)
 
         timeout_handler = TimeoutHandler(20, driver)
 

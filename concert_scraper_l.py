@@ -60,7 +60,7 @@ def safe_get(thread_id, driver, wait, link, field):
 
     while True:
         if tries % 4 == 0:
-            sleep(60)
+            sleep(300)
 
         timeout_handler = TimeoutHandler(20, driver)
 

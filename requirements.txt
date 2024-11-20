@@ -3,3 +3,4 @@ selenium
 boto3
 psutil
 requests
+urllib3==1.26.7

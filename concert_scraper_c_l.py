@@ -28,10 +28,17 @@ while '.' in init_time:
 while ':' in init_time:
     init_time = init_time.replace(':', '-')
 
-master_set = pd.DataFrame({'artist': [],
-                           'genres': [],
-                           'bio': [],
-                           'artist_id': []})
+master_set = pd.DataFrame({
+    'concert': [],
+    'start_date': [],
+    'end_date': [],
+    'bands': [],
+    'venue': [],
+    'city': [],
+    'state': [],
+    'country': [],
+    'setlist': []
+})
 
 sets_lock = threading.Lock()
 
@@ -45,7 +52,7 @@ def create_driver():
     options.add_argument("--disable-gpu")
     options.page_load_strategy = 'eager'
 
-    service = Service('chromedriver-linux64/chromedriver-linux64/chromedriver')
+    service = Service('chromedriver-win64\\chromedriver.exe')
 
     driver = webdriver.Chrome(options=options, service=service)
     driver.implicitly_wait(20)
@@ -136,8 +143,6 @@ class ArtistScraper:
             link = response['Messages'][0]['Body']
             receipt_handle = response['Messages'][0]['ReceiptHandle']
 
-            link = link.replace('34.201.209.209', '44.202.193.191')
-
             artist_names = []
             artist_genres = []
             artist_descriptions = []
@@ -160,7 +165,7 @@ class ArtistScraper:
             # replace the concert archive link with root IP
             for link_elem in artist_link_elems:
                 link = link_elem.get_attribute('href')
-                link = link.replace('www.concertarchives.org', '34.201.209.209')
+                link = link.replace('www.concertarchives.org', '44.202.193.191')
                 links.append(link)
 
             # for every artist link, scrape artist info
@@ -227,8 +232,8 @@ class ArtistScraper:
             while True:
                 try:
                     genres.append(self.clean_string(
-                    driver.execute_script("return arguments[0].textContent;",
-                                          genre_elem)))
+                        driver.execute_script("return arguments[0].textContent;",
+                                              genre_elem)))
                     break
                 except Exception as e:
                     pass
@@ -253,6 +258,115 @@ class ConcertScraper:
     def __init__(self):
         pass
 
+    def scrape(self, thread_id):
+        driver = create_driver()
+        wait = WebDriverWait(driver, 10)
+
+        while True:
+            start_dates = []
+            end_dates = []
+            concert_names = []
+            bands = []
+            venues = []
+            cities = []
+            states = []
+            countries = []
+            links = []
+            setlists = []
+
+            response = client.receive_message(
+                QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
+                MaxNumberOfMessages=1,
+                WaitTimeSeconds=0,
+                VisibilityTimeout=10
+            )
+
+            if 'Messages' not in response:
+                break
+
+            link = response['Messages'][0]['Body']
+            receipt_handle = response['Messages'][0]['ReceiptHandle']
+
+            print(f'getting {link}')
+
+            driver, wait = safe_get(thread_id, driver, wait, link, 'table')
+
+            concert_list = driver.find_elements(by=By.TAG_NAME, value='tbody')
+            concert_list_elems = concert_list[0].find_elements(by=By.TAG_NAME,
+                                                               value='tr') + \
+                                 concert_list[1].find_elements(by=By.TAG_NAME,
+                                                               value='tr')
+
+            driver.implicitly_wait(1)
+
+            for concert_elem in concert_list_elems:
+                concert_elems = concert_elem.find_elements(by=By.TAG_NAME,
+                                                           value='td')
+
+                concert_name, start_date, end_date, conc_bands, venue, city, state, country, link = self.scrape_concerts(
+                    concert_elems)
+                concert_names.append(concert_name)
+                start_dates.append(start_date)
+                end_dates.append(end_date)
+                bands.append(conc_bands)
+                venues.append(venue)
+                cities.append(city)
+                states.append(state)
+                countries.append(country)
+                links.append(link)
+
+            driver.implicitly_wait(20)
+
+            for link in links:
+                print(link)
+                driver.implicitly_wait(20)
+                safe_get(thread_id, driver, wait, link, 'profile-display')
+                driver.implicitly_wait(1)
+
+                timeout_handler = TimeoutHandler(1, None)
+
+                try:
+                    with timeout_handler:
+                        list_elems = driver.find_elements(by=By.XPATH, value="//dl[@class='dl-horizontal']//dd//ol//li")
+                except:
+                    list_elems = []
+
+                setlist = self.scrape_setlist(list_elems)
+                setlists.append(setlist)
+
+            driver.implicitly_wait(20)
+
+            setlist_strings = list(map(lambda l: ';'.join(l), setlists))
+
+            mini_concert_set = pd.DataFrame({
+                'concert': concert_names,
+                'start_date': start_dates,
+                'end_date': end_dates,
+                'bands': bands,
+                'venue': venues,
+                'city': cities,
+                'state': states,
+                'country': countries,
+                'setlist': setlist_strings
+            })
+
+            client.delete_message(QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
+                                  ReceiptHandle=receipt_handle)
+
+            with sets_lock:
+                global master_set
+                master_set = pd.concat([master_set, mini_concert_set])
+                master_set.to_csv(f'./concert_set_{init_time}.csv', index=False)
+                s3.upload_file(f'./concert_set_{init_time}.csv', 'concertbucket777', f'concert_set_{init_time}.csv')
+
+    def scrape_setlist(self, list_elems):
+        sets = []
+
+        for elem in list_elems:
+            sets.append(elem.text)
+
+        return sets
+
     def scrape_concert_name(self, concert_elems):
         concert_name = concert_elems[1].find_element(by=By.TAG_NAME,
                                                      value='a').text
@@ -273,9 +387,20 @@ class ConcertScraper:
 
         return start_date, end_date
 
+    def scrape_concert_link(self, concert_elems):
+        concert_link = concert_elems[1].find_element(by=By.TAG_NAME, value='a').get_attribute('href')
+
+        return concert_link
+
     def scrape_concert_bands(self, concert_elems, concert_name):
-        bands_elem = concert_elems[1].find_elements(by=By.CLASS_NAME,
-                                                    value='concert-index-band-list')
+        timeout_handler = TimeoutHandler(1, None)
+
+        try:
+            with timeout_handler:
+                bands_elem = concert_elems[1].find_elements(by=By.CLASS_NAME,
+                                                            value='concert-index-band-list')
+        except:
+            bands_elem = []
 
         if len(bands_elem) != 0:
             band_names = bands_elem[0].text
@@ -317,73 +442,19 @@ class ConcertScraper:
         band = self.scrape_concert_bands(concert_elems, concert_name)
         venue = self.scrape_concert_venue(concert_elems)
         city, state, country = self.scrape_concert_location(concert_elems)
+        link = self.scrape_concert_link(concert_elems)
 
-        return concert_name, start_date, end_date, band, venue, city, state, country
-
-    def scrape(self):
-        start_dates = []
-        end_dates = []
-        concert_names = []
-        bands = []
-        venues = []
-        cities = []
-        states = []
-        countries = []
-
-        options1 = webdriver.ChromeOptions()
-        options1.add_argument("start-maximized")
-        options1.add_argument("--headless")
-        options1.add_experimental_option("excludeSwitches",
-                                         ["enable-automation"])
-        options1.add_experimental_option('useAutomationExtension', False)
-        service1 = Service('chromedriver-win64\\chromedriver.exe')
-        driver = webdriver.Chrome(options=options1, service=service1)
-
-        for page in range(1, 2):
-            # driver.get(f'http://34.201.209.209/locations/new-york-new-york-united-states?page={page}#concert-table')
-            concert_list = driver.find_elements(by=By.TAG_NAME, value='tbody')
-            concert_list_elems = concert_list[0].find_elements(by=By.TAG_NAME,
-                                                               value='tr') + \
-                                 concert_list[1].find_elements(by=By.TAG_NAME,
-                                                               value='tr')
-
-            for concert_elem in concert_list_elems:
-                concert_elems = concert_elem.find_elements(by=By.TAG_NAME,
-                                                           value='td')
-
-                concert_name, start_date, end_date, conc_bands, venue, city, state, country = self.scrape_concerts(
-                    concert_elems)
-                concert_names.append(concert_name)
-                start_dates.append(start_date)
-                end_dates.append(end_date)
-                bands.append(conc_bands)
-                venues.append(venue)
-                cities.append(city)
-                states.append(state)
-                countries.append(country)
-
-        concert_set = pd.DataFrame({
-            'concert': concert_names,
-            'start_date': start_dates,
-            'end_date': end_dates,
-            'bands': bands,
-            'venue': venues,
-            'city': cities,
-            'state': states,
-            'country': countries
-        })
-
-        return concert_set
+        return concert_name, start_date, end_date, band, venue, city, state, country, link
 
 
 if __name__ == "__main__":
-    artist_scraper = ArtistScraper()
+    concert_scraper = ConcertScraper()
     threads = []
 
     for i in range(1):
         threads.append(
             threading.Thread(
-                target=artist_scraper.scrape,
+                target=concert_scraper.scrape,
                 args=(i,)
             )
         )
@@ -393,4 +464,4 @@ if __name__ == "__main__":
     for i in range(1):
         threads[i].join()
 
-    s3.upload_file(f'artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
+    s3.upload_file(f'concert_set_{init_time}.csv', 'concertbucket777', f'concert_set_{init_time}.csv')

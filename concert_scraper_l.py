@@ -1,8 +1,5 @@
 import datetime
-import random
-
 import psutil
-import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -12,6 +9,7 @@ import threading
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import boto3
+import os
 
 client = boto3.client('sqs')
 s3 = boto3.client('s3')
@@ -32,16 +30,12 @@ sets_lock = threading.Lock()
 
 
 def create_driver():
-    proxies = requests.get('https://proxylist.geonode.com/api/proxy-list?limit=500&page=1&sort_by=lastChecked&sort_type=desc')
-    proxy = proxies.json()['data'][random.randint(0, 500)]
-
     options = webdriver.ChromeOptions()
     options.add_argument("start-maximized")
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.add_argument(f'--proxy-server={proxy["ip"]}:{proxy["port"]}')
     options.page_load_strategy = 'eager'
 
     service = Service('chromedriver-linux64/chromedriver-linux64/chromedriver')
@@ -123,7 +117,7 @@ class ArtistScraper:
 
         while True:
             response = client.receive_message(
-                QueueUrl='https://sqs.us-east-1.amazonaws.com/600676944237/ArtistQueue',
+                QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
                 MaxNumberOfMessages=1,
                 WaitTimeSeconds=0,
                 VisibilityTimeout=900
@@ -184,7 +178,7 @@ class ArtistScraper:
                 'artist_id': artist_id
             })
 
-            client.delete_message(QueueUrl='https://sqs.us-east-1.amazonaws.com/600676944237/ArtistQueue',
+            client.delete_message(QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
                                   ReceiptHandle=receipt_handle)
 
             with sets_lock:

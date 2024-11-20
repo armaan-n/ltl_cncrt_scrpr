@@ -1,4 +1,6 @@
 import datetime
+import random
+
 import psutil
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -16,7 +18,12 @@ s3 = boto3.client('s3')
 
 threads = []
 init_time = datetime.datetime.now()
-init_time = str(init_time)[:str(init_time).index('.')]
+init_time = str(init_time)
+rand_number = random.random()
+init_time += str(rand_number)
+
+while '.' in init_time:
+    init_time = init_time.replace('.', '-')
 
 while ':' in init_time:
     init_time = init_time.replace(':', '-')

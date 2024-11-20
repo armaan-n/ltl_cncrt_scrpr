@@ -205,7 +205,10 @@ class ArtistScraper:
                     master_set.to_csv(f'./artist_set_{init_time}.csv', index=False)
                     s3.upload_file(f'./artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
             except Exception as e:
-                pass
+                driver = create_driver()
+                wait = WebDriverWait(driver, 10)
+                print('sleeping')
+                sleep(300)
 
         driver.quit()
 

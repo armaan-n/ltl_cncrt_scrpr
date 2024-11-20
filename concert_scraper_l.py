@@ -185,6 +185,7 @@ class ArtistScraper:
                 global master_set
                 master_set = pd.concat([master_set, mini_artist_set])
                 master_set.to_csv(f'artist_set_{init_time}.csv', index=False)
+                s3.upload_file(f'artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
 
         driver.quit()
 

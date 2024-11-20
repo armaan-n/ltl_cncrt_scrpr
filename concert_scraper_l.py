@@ -1,5 +1,6 @@
 import datetime
 import random
+from time import sleep
 
 import psutil
 from selenium import webdriver

@@ -2,3 +2,4 @@ pandas
 selenium
 boto3
 psutil
+requests

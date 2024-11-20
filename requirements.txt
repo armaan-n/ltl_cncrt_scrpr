@@ -1,4 +1,4 @@
-pandas~=2.2.2
-selenium~=4.24.0
-boto3~=1.35.50
-psutil~=5.9.0
+pandas
+selenium
+boto3
+psutil

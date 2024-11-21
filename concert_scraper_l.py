@@ -51,7 +51,7 @@ def create_driver():
     options.add_argument("--disable-gpu")
     options.page_load_strategy = 'eager'
 
-    driver = Driver(uc=True, page_load_strategy='eager', disable_gpu=True, headless2=True)
+    driver = Driver(uc=True, page_load_strategy='eager', disable_gpu=True)
     driver.maximize_window()
     driver.implicitly_wait(5)
     driver.set_page_load_timeout(1)
@@ -60,9 +60,27 @@ def create_driver():
 
 
 def safe_get(thread_id, driver, wait, link, field):
-    driver.open(link)
-    wait.until(EC.visibility_of_element_located(
-        (By.CLASS_NAME, field)))
+    tries = 1
+
+    while True:
+        if tries % 4 == 0:
+            sleep(300)
+
+        timeout_handler = TimeoutHandler(20, driver)
+
+        try:
+            with timeout_handler:
+                driver.get(link)
+                wait.until(EC.visibility_of_element_located(
+                    (By.CLASS_NAME, field)))
+                break
+        except:
+            print(f'thread {thread_id}: failed waiting')
+
+        driver = create_driver()
+        wait = WebDriverWait(driver, 10)
+
+        tries += 1
 
     return driver, wait
 

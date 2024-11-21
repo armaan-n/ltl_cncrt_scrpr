@@ -40,17 +40,17 @@ sets_lock = threading.Lock()
 def create_driver():
     options = webdriver.ChromeOptions()
     options.add_argument("start-maximized")
-    options.add_argument("--headless")
     options.add_argument("--no-sandbox")
+    options.add_argument("--headless")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.page_load_strategy = 'eager'
+    options.page_load_strategy = 'none'
 
     service = Service('chromedriver-linux64/chromedriver-linux64/chromedriver')
 
     driver = webdriver.Chrome(options=options, service=service)
-    driver.implicitly_wait(20)
-    driver.set_page_load_timeout(20)
+    driver.implicitly_wait(10)
+    driver.set_page_load_timeout(10)
 
     return driver
 
@@ -62,11 +62,12 @@ def safe_get(thread_id, driver, wait, link, field):
         if tries % 4 == 0:
             sleep(300)
 
-        timeout_handler = TimeoutHandler(20, driver)
+        timeout_handler = TimeoutHandler(10, driver)
 
         try:
             with timeout_handler:
                 driver.get(link)
+                sleep(0.5)
                 wait.until(EC.visibility_of_element_located(
                     (By.CLASS_NAME, field)))
                 break
@@ -227,17 +228,21 @@ class ArtistScraper:
     def scrape_artist_genres(self, driver):
         genres = []
 
+        driver.implicitly_wait(0)
+        more_geners = driver.find_elements(by=By.ID, value='show-more-list-genres')
+
+        if len(more_geners) == 1:
+            more_geners[0].click()
+            sleep(0.1)
+
         genre_elems = driver.find_elements(by=By.CLASS_NAME, value='genre-list')
+        driver.implicitly_wait(20)
 
         for genre_elem in genre_elems:
-            while True:
-                try:
-                    genres.append(self.clean_string(
-                        driver.execute_script("return arguments[0].textContent;",
-                                              genre_elem)))
-                    break
-                except Exception as e:
-                    pass
+            try:
+                genres.append(self.clean_string(genre_elem.text))
+            except Exception as e:
+                pass
 
         return genres
 

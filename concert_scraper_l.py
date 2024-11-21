@@ -16,6 +16,10 @@ import os
 
 client = boto3.client('sqs')
 s3 = boto3.client('s3')
+s3.download_file('creds777', 'ip.txt', 'ip.txt')
+
+with open('ip.txt', 'r') as f:
+    ip = f.read()
 
 threads = []
 init_time = datetime.datetime.now()
@@ -60,6 +64,13 @@ def safe_get(thread_id, driver, wait, link, field):
 
     while True:
         if tries % 4 == 0:
+            s3.download_file('creds777', 'ip.txt', 'ip.txt')
+
+            with open('ip.txt', 'r') as f:
+                global ip
+                ip = f.read()
+
+            print('sleeping')
             sleep(300)
 
         timeout_handler = TimeoutHandler(20, driver)
@@ -131,84 +142,78 @@ class ArtistScraper:
         wait = WebDriverWait(driver, 10)
 
         while True:
-            try:
-                response = client.receive_message(
-                    QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
-                    MaxNumberOfMessages=1,
-                    WaitTimeSeconds=0,
-                    VisibilityTimeout=900
-                )
+            response = client.receive_message(
+                QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
+                MaxNumberOfMessages=1,
+                WaitTimeSeconds=0,
+                VisibilityTimeout=900
+            )
 
-                if 'Messages' not in response:
-                    break
+            if 'Messages' not in response:
+                break
 
-                link = response['Messages'][0]['Body']
-                receipt_handle = response['Messages'][0]['ReceiptHandle']
+            link = response['Messages'][0]['Body']
+            receipt_handle = response['Messages'][0]['ReceiptHandle']
 
-                link = link.replace('34.201.209.209', '44.202.193.191')
+            link = link.replace('34.201.209.209', ip)
 
-                artist_names = []
-                artist_genres = []
-                artist_descriptions = []
-                links = []
-                artist_id = []
+            artist_names = []
+            artist_genres = []
+            artist_descriptions = []
+            links = []
+            artist_id = []
 
-                # request page and wait for body to load
-                print(f'thread {thread_id}: processing {link}')
-                driver, wait = safe_get(thread_id, driver, wait, link, 'table')
-                print('done waiting')
+            # request page and wait for body to load
+            print(f'thread {thread_id}: processing {link}')
+            driver, wait = safe_get(thread_id, driver, wait, link, 'table')
+            print('done waiting')
 
-                # get artist table
-                artist_table_elem = driver.find_element(by=By.TAG_NAME,
-                                                        value='tbody')
+            # get artist table
+            artist_table_elem = driver.find_element(by=By.TAG_NAME,
+                                                    value='tbody')
 
-                # get links elements to artists
-                artist_link_elems = artist_table_elem.find_elements(by=By.TAG_NAME,
-                                                                    value='a')
+            # get links elements to artists
+            artist_link_elems = artist_table_elem.find_elements(by=By.TAG_NAME,
+                                                                value='a')
 
-                # replace the concert archive link with root IP
-                for link_elem in artist_link_elems:
-                    link = link_elem.get_attribute('href')
-                    link = link.replace('www.concertarchives.org', '34.201.209.209')
-                    links.append(link)
+            # replace the concert archive link with root IP
+            for link_elem in artist_link_elems:
+                link = link_elem.get_attribute('href')
+                link = link.replace('www.concertarchives.org', ip)
+                links.append(link)
 
-                # for every artist link, scrape artist info
-                for link_idx in range(len(links)):
-                    link = links[link_idx]
-                    print(f'thread {thread_id}: link progress: {link_idx + 1} / {len(links)}')
+            # for every artist link, scrape artist info
+            for link_idx in range(len(links)):
+                link = links[link_idx]
+                print(f'thread {thread_id}: link progress: {link_idx + 1} / {len(links)}')
 
-                    # try to load page
-                    driver, wait = safe_get(thread_id, driver, wait, link, "profile-display")
+                # try to load page
+                driver, wait = safe_get(thread_id, driver, wait, link, "profile-display")
 
-                    # scrape info
-                    name, genres, description = self.scrape_artist(driver)
-                    artist_names.append(name)
-                    artist_genres.append(genres)
-                    artist_descriptions.append(description)
-                    artist_id.append(link[link.rfind('/') + 1:])
+                # scrape info
+                name, genres, description = self.scrape_artist(driver)
+                artist_names.append(name)
+                artist_genres.append(genres)
+                artist_descriptions.append(description)
+                artist_id.append(link[link.rfind('/') + 1:])
 
-                genre_strings = list(map(lambda l: ';'.join(l), artist_genres))
+            genre_strings = list(map(lambda l: ';'.join(l), artist_genres))
 
-                mini_artist_set = pd.DataFrame({
-                    'artist': artist_names,
-                    'genres': genre_strings,
-                    'bio': artist_descriptions,
-                    'artist_id': artist_id
-                })
+            mini_artist_set = pd.DataFrame({
+                'artist': artist_names,
+                'genres': genre_strings,
+                'bio': artist_descriptions,
+                'artist_id': artist_id
+            })
 
-                client.delete_message(QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
-                                      ReceiptHandle=receipt_handle)
+            client.delete_message(QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
+                                  ReceiptHandle=receipt_handle)
 
-                with sets_lock:
-                    global master_set
-                    master_set = pd.concat([master_set, mini_artist_set])
-                    master_set.to_csv(f'./artist_set_{init_time}.csv', index=False)
-                    s3.upload_file(f'./artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
-            except Exception as e:
-                driver = create_driver()
-                wait = WebDriverWait(driver, 10)
-                print('sleeping')
-                sleep(300)
+            with sets_lock:
+                global master_set
+                master_set = pd.concat([master_set, mini_artist_set])
+                master_set.to_csv(f'./artist_set_{init_time}.csv', index=False)
+                s3.upload_file(f'./artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
 
         driver.quit()
 
@@ -241,8 +246,8 @@ class ArtistScraper:
             while True:
                 try:
                     genres.append(self.clean_string(
-                    driver.execute_script("return arguments[0].textContent;",
-                                          genre_elem)))
+                        driver.execute_script("return arguments[0].textContent;",
+                                              genre_elem)))
                     break
                 except Exception as e:
                     pass

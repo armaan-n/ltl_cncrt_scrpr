@@ -4,6 +4,7 @@ from time import sleep
 
 import psutil
 from selenium import webdriver
+from seleniumbase import Driver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 import pandas as pd
@@ -50,44 +51,18 @@ def create_driver():
     options.add_argument("--disable-gpu")
     options.page_load_strategy = 'eager'
 
-    service = Service('chromedriver-linux64/chromedriver-linux64/chromedriver')
-
-    driver = webdriver.Chrome(options=options, service=service)
-    driver.implicitly_wait(20)
-    driver.set_page_load_timeout(20)
+    driver = Driver(uc=True, page_load_strategy='eager', disable_gpu=True, headless2=True)
+    driver.maximize_window()
+    driver.implicitly_wait(5)
+    driver.set_page_load_timeout(1)
 
     return driver
 
 
 def safe_get(thread_id, driver, wait, link, field):
-    tries = 1
-
-    while True:
-        if tries % 4 == 0:
-            s3.download_file('creds777', 'ip.txt', 'ip.txt')
-
-            with open('ip.txt', 'r') as f:
-                global ip
-                ip = f.read()
-
-            print('sleeping')
-            sleep(300)
-
-        timeout_handler = TimeoutHandler(20, driver)
-
-        try:
-            with timeout_handler:
-                driver.get(link)
-                wait.until(EC.visibility_of_element_located(
-                    (By.CLASS_NAME, field)))
-                break
-        except:
-            print(f'thread {thread_id}: failed waiting')
-
-        driver = create_driver()
-        wait = WebDriverWait(driver, 10)
-
-        tries += 1
+    driver.open(link)
+    wait.until(EC.visibility_of_element_located(
+        (By.CLASS_NAME, field)))
 
     return driver, wait
 

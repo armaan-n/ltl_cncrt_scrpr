@@ -4,7 +4,6 @@ from time import sleep
 
 import psutil
 from selenium import webdriver
-from seleniumbase import Driver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 import pandas as pd
@@ -17,10 +16,6 @@ import os
 
 client = boto3.client('sqs')
 s3 = boto3.client('s3')
-s3.download_file('creds777', 'ip.txt', 'ip.txt')
-
-with open('ip.txt', 'r') as f:
-    ip = f.read()
 
 threads = []
 init_time = datetime.datetime.now()
@@ -51,10 +46,11 @@ def create_driver():
     options.add_argument("--disable-gpu")
     options.page_load_strategy = 'eager'
 
-    driver = Driver(uc=True, page_load_strategy='eager', disable_gpu=True)
-    driver.maximize_window()
-    driver.implicitly_wait(5)
-    driver.set_page_load_timeout(1)
+    service = Service('chromedriver-linux64/chromedriver-linux64/chromedriver')
+
+    driver = webdriver.Chrome(options=options, service=service)
+    driver.implicitly_wait(20)
+    driver.set_page_load_timeout(20)
 
     return driver
 
@@ -148,8 +144,6 @@ class ArtistScraper:
             link = response['Messages'][0]['Body']
             receipt_handle = response['Messages'][0]['ReceiptHandle']
 
-            link = link.replace('34.201.209.209', ip)
-
             artist_names = []
             artist_genres = []
             artist_descriptions = []
@@ -172,7 +166,7 @@ class ArtistScraper:
             # replace the concert archive link with root IP
             for link_elem in artist_link_elems:
                 link = link_elem.get_attribute('href')
-                link = link.replace('www.concertarchives.org', ip)
+                link = link.replace('www.concertarchives.org', '34.201.209.209')
                 links.append(link)
 
             # for every artist link, scrape artist info

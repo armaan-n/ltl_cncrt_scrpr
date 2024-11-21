@@ -72,7 +72,7 @@ def safe_get(thread_id, driver, wait, link, field):
                     (By.CLASS_NAME, field)))
                 break
         except:
-            print(f'thread {thread_id}: failed waiting')
+            print(f'thread {thread_id}: failed waiting', flush=True)
 
         driver = create_driver()
         wait = WebDriverWait(driver, 10)
@@ -104,7 +104,7 @@ class TimeoutHandler:
             self.timer.cancel()
 
     def force_quit(self):
-        print("Force quitting due to timeout...")
+        print("Force quitting due to timeout...", flush=True)
         if self.driver:
             try:
                 # Get the process ID
@@ -152,9 +152,9 @@ class ArtistScraper:
             artist_id = []
 
             # request page and wait for body to load
-            print(f'thread {thread_id}: processing {link}')
+            print(f'thread {thread_id}: processing {link}', flush=True)
             driver, wait = safe_get(thread_id, driver, wait, link, 'table')
-            print('done waiting')
+            print('done waiting', flush=True)
 
             # get artist table
             artist_table_elem = driver.find_element(by=By.TAG_NAME,
@@ -173,7 +173,7 @@ class ArtistScraper:
             # for every artist link, scrape artist info
             for link_idx in range(len(links)):
                 link = links[link_idx]
-                print(f'thread {thread_id}: link progress: {link_idx + 1} / {len(links)}')
+                print(f'thread {thread_id}: link progress: {link_idx + 1} / {len(links)}', flush=True)
 
                 # try to load page
                 driver, wait = safe_get(thread_id, driver, wait, link, "profile-display")

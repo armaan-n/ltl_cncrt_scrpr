@@ -383,20 +383,13 @@ class ConcertScraper:
 
 
 if __name__ == "__main__":
-    artist_scraper = ArtistScraper()
-    threads = []
+    while True:
+        try:
+            artist_scraper = ArtistScraper()
+            threads = []
 
-    for i in range(1):
-        threads.append(
-            threading.Thread(
-                target=artist_scraper.scrape,
-                args=(i,)
-            )
-        )
+            artist_scraper.scrape(1)
 
-        threads[i].start()
-
-    for i in range(1):
-        threads[i].join()
-
-    s3.upload_file(f'artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
+            s3.upload_file(f'artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
+        except Exception as e:
+            pass

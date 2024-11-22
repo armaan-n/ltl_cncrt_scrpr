@@ -60,16 +60,14 @@ def create_driver():
 
 def safe_get(thread_id, driver, wait, link, field):
     tries = 1
-    driver.open(link)
+
 
     while True:
-        if tries % 4 == 0:
-            print('sleeping')
-            sleep(30)
-
         timeout_handler = TimeoutHandler(wait_time, driver)
 
         try:
+            driver.open(link)
+
             with timeout_handler:
                 driver.find_element(by=By.CLASS_NAME,
                                     value=field)
@@ -78,6 +76,8 @@ def safe_get(thread_id, driver, wait, link, field):
             print(f'thread {thread_id}: failed waiting', flush=True)
 
         tries += 1
+        driver = create_driver()
+        wait = WebDriverWait(driver, wait_time)
 
     return driver, wait
 
@@ -230,7 +230,7 @@ class ArtistScraper:
         genres = []
 
         driver.implicitly_wait(0)
-        more_geners = driver.find_elements(by=By.ID, value='show-more-list-genres')
+        more_geners = driver.find_elements(by=By.CLASS_NAME, value='fs-sticky-footer')
 
         if len(more_geners) == 1:
             more_geners[0].click()

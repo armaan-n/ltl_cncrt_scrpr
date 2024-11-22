@@ -60,7 +60,7 @@ def safe_get(thread_id, driver, wait, link, field):
 
     while True:
         if tries % 4 == 0:
-            sleep(300)
+            raise Exception('womp womp')
 
         timeout_handler = TimeoutHandler(10, driver)
 
@@ -389,9 +389,6 @@ class ConcertScraper:
 
 
 if __name__ == "__main__":
-    with open('flag', 'w') as f:
-        f.write('flagger')
-
     while True:
         try:
             artist_scraper = ArtistScraper()

@@ -1,8 +1,8 @@
 import datetime
 import random
+from time import sleep
 
 import psutil
-import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -12,13 +12,19 @@ import threading
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import boto3
+import os
 
 client = boto3.client('sqs')
 s3 = boto3.client('s3')
 
 threads = []
 init_time = datetime.datetime.now()
-init_time = str(init_time)[:str(init_time).index('.')]
+init_time = str(init_time)
+rand_number = random.random()
+init_time += str(rand_number)
+
+while '.' in init_time:
+    init_time = init_time.replace('.', '-')
 
 while ':' in init_time:
     init_time = init_time.replace(':', '-')
@@ -32,42 +38,46 @@ sets_lock = threading.Lock()
 
 
 def create_driver():
-    proxies = requests.get('https://proxylist.geonode.com/api/proxy-list?limit=500&page=1&sort_by=lastChecked&sort_type=desc')
-    proxy = proxies.json()['data'][random.randint(0, 500)]
-
     options = webdriver.ChromeOptions()
     options.add_argument("start-maximized")
-    options.add_argument("--headless")
     options.add_argument("--no-sandbox")
-    options.add_argument(f'--proxy-server={"142.44.210.174"}:{"80"}')
+    options.add_argument("--headless")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.page_load_strategy = 'eager'
+    options.page_load_strategy = 'none'
 
     service = Service('chromedriver-win64\\chromedriver.exe')
 
     driver = webdriver.Chrome(options=options, service=service)
-    driver.implicitly_wait(20)
-    driver.set_page_load_timeout(20)
+    driver.implicitly_wait(10)
+    driver.set_page_load_timeout(10)
 
     return driver
 
 
 def safe_get(thread_id, driver, wait, link, field):
+    tries = 1
+
     while True:
-        timeout_handler = TimeoutHandler(20, driver)
+        if tries % 4 == 0:
+            sleep(300)
+
+        timeout_handler = TimeoutHandler(10, driver)
 
         try:
             with timeout_handler:
                 driver.get(link)
+                sleep(0.5)
                 wait.until(EC.visibility_of_element_located(
                     (By.CLASS_NAME, field)))
                 break
         except:
-            print(f'thread {thread_id}: failed waiting')
+            print(f'thread {thread_id}: failed waiting', flush=True)
 
         driver = create_driver()
         wait = WebDriverWait(driver, 10)
+
+        tries += 1
 
     return driver, wait
 
@@ -94,6 +104,7 @@ class TimeoutHandler:
             self.timer.cancel()
 
     def force_quit(self):
+        print("Force quitting due to timeout...", flush=True)
         if self.driver:
             try:
                 # Get the process ID
@@ -122,16 +133,17 @@ class ArtistScraper:
 
         while True:
             response = client.receive_message(
-                QueueUrl='https://sqs.us-east-1.amazonaws.com/600676944237/ArtistQueue',
+                QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
                 MaxNumberOfMessages=1,
                 WaitTimeSeconds=0,
-                VisibilityTimeout=60
+                VisibilityTimeout=900
             )
 
             if 'Messages' not in response:
                 break
 
             link = response['Messages'][0]['Body']
+            link = link.replace('34.201.209.209', '34.224.117.253')
             receipt_handle = response['Messages'][0]['ReceiptHandle']
 
             artist_names = []
@@ -141,8 +153,9 @@ class ArtistScraper:
             artist_id = []
 
             # request page and wait for body to load
-            print(f'thread {thread_id}: processing {link}')
+            print(f'thread {thread_id}: processing {link}', flush=True)
             driver, wait = safe_get(thread_id, driver, wait, link, 'table')
+            print('done waiting', flush=True)
 
             # get artist table
             artist_table_elem = driver.find_element(by=By.TAG_NAME,
@@ -155,13 +168,13 @@ class ArtistScraper:
             # replace the concert archive link with root IP
             for link_elem in artist_link_elems:
                 link = link_elem.get_attribute('href')
-                link = link.replace('www.concertarchives.org', '34.201.209.209')
+                link = link.replace('www.concertarchives.org', '34.224.117.253')
                 links.append(link)
 
             # for every artist link, scrape artist info
             for link_idx in range(len(links)):
                 link = links[link_idx]
-                print(f'thread {thread_id}: link progress: {link_idx + 1} / {len(links)}')
+                print(f'thread {thread_id}: link progress: {link_idx + 1} / {len(links)}', flush=True)
 
                 # try to load page
                 driver, wait = safe_get(thread_id, driver, wait, link, "profile-display")
@@ -182,13 +195,14 @@ class ArtistScraper:
                 'artist_id': artist_id
             })
 
-            client.delete_message(QueueUrl='https://sqs.us-east-1.amazonaws.com/600676944237/ArtistQueue',
+            client.delete_message(QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
                                   ReceiptHandle=receipt_handle)
 
             with sets_lock:
                 global master_set
                 master_set = pd.concat([master_set, mini_artist_set])
-                master_set.to_csv(f'artist_set_{init_time}.csv', index=False)
+                master_set.to_csv(f'./artist_set_{init_time}.csv', index=False)
+                s3.upload_file(f'./artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
 
         driver.quit()
 
@@ -215,17 +229,21 @@ class ArtistScraper:
     def scrape_artist_genres(self, driver):
         genres = []
 
+        driver.implicitly_wait(0)
+        more_geners = driver.find_elements(by=By.ID, value='show-more-list-genres')
+
+        if len(more_geners) == 1:
+            more_geners[0].click()
+            sleep(0.1)
+
         genre_elems = driver.find_elements(by=By.CLASS_NAME, value='genre-list')
+        driver.implicitly_wait(20)
 
         for genre_elem in genre_elems:
-            while True:
-                try:
-                    genres.append(self.clean_string(
-                        driver.execute_script("return arguments[0].textContent;",
-                                              genre_elem)))
-                    break
-                except Exception as e:
-                    pass
+            try:
+                genres.append(self.clean_string(genre_elem.text))
+            except Exception as e:
+                pass
 
         return genres
 
@@ -371,20 +389,13 @@ class ConcertScraper:
 
 
 if __name__ == "__main__":
-    artist_scraper = ArtistScraper()
-    threads = []
+    while True:
+        try:
+            artist_scraper = ArtistScraper()
+            threads = []
 
-    for i in range(1):
-        threads.append(
-            threading.Thread(
-                target=artist_scraper.scrape,
-                args=(i,)
-            )
-        )
+            artist_scraper.scrape(1)
 
-        threads[i].start()
-
-    for i in range(1):
-        threads[i].join()
-
-    s3.upload_file(f'artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
+            s3.upload_file(f'artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
+        except Exception as e:
+            pass

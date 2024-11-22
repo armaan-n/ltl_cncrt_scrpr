@@ -17,6 +17,8 @@ import os
 client = boto3.client('sqs')
 s3 = boto3.client('s3')
 
+wait_time = 20
+
 threads = []
 init_time = datetime.datetime.now()
 init_time = str(init_time)
@@ -49,8 +51,8 @@ def create_driver():
     service = Service('chromedriver-linux64/chromedriver-linux64/chromedriver')
 
     driver = webdriver.Chrome(options=options, service=service)
-    driver.implicitly_wait(10)
-    driver.set_page_load_timeout(10)
+    driver.implicitly_wait(wait_time)
+    driver.set_page_load_timeout(wait_time)
 
     return driver
 
@@ -62,7 +64,7 @@ def safe_get(thread_id, driver, wait, link, field):
         if tries % 4 == 0:
             raise Exception('womp womp')
 
-        timeout_handler = TimeoutHandler(10, driver)
+        timeout_handler = TimeoutHandler(wait_time, driver)
 
         try:
             with timeout_handler:
@@ -75,7 +77,7 @@ def safe_get(thread_id, driver, wait, link, field):
             print(f'thread {thread_id}: failed waiting', flush=True)
 
         driver = create_driver()
-        wait = WebDriverWait(driver, 10)
+        wait = WebDriverWait(driver, wait_time)
 
         tries += 1
 
@@ -129,7 +131,7 @@ class ArtistScraper:
     def scrape(self, thread_id):
         # create driver and waiter
         driver = create_driver()
-        wait = WebDriverWait(driver, 10)
+        wait = WebDriverWait(driver, wait_time)
 
         while True:
             response = client.receive_message(
@@ -237,7 +239,7 @@ class ArtistScraper:
             sleep(0.1)
 
         genre_elems = driver.find_elements(by=By.CLASS_NAME, value='genre-list')
-        driver.implicitly_wait(20)
+        driver.implicitly_wait(wait_time)
 
         for genre_elem in genre_elems:
             try:

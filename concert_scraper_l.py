@@ -17,7 +17,7 @@ import os
 client = boto3.client('sqs')
 s3 = boto3.client('s3')
 
-wait_time = 20
+wait_time = 60
 
 threads = []
 init_time = datetime.datetime.now()

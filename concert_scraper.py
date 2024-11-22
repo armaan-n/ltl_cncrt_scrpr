@@ -76,7 +76,6 @@ def safe_get(thread_id, driver, wait, link, field):
             print(f'thread {thread_id}: failed waiting', flush=True)
 
             if i == 10:
-                sleep(300)
                 raise Exception('womp womp')
 
         tries += 1

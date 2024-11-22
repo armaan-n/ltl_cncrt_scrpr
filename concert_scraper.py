@@ -47,7 +47,7 @@ def create_driver():
     options.add_argument("--headless")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.page_load_strategy = 'none'
+    options.page_load_strategy = 'eager'
 
     # service = Service('chromedriver-win64\\chromedriver.exe')
 
@@ -66,17 +66,16 @@ def safe_get(thread_id, driver, wait, link, field):
         timeout_handler = TimeoutHandler(wait_time, driver)
 
         try:
-            driver.open(link)
+            driver.uc_open_with_tab(link)
 
             with timeout_handler:
-                driver.find_element(by=By.CLASS_NAME,
-                                    value=field)
+                driver.wait_for_element(f'.{field}', timeout=30)
                 break
         except:
             print(f'thread {thread_id}: failed waiting', flush=True)
 
             if i == 10:
-                raise Exception('womp womp')
+                raise Exception('womp')
 
         tries += 1
         driver = create_driver()
@@ -236,7 +235,7 @@ class ArtistScraper:
         more_geners = driver.find_elements(by=By.ID, value='show-more-list-genres')
 
         if len(more_geners) == 1:
-            more_geners[0].click()
+            driver.uc_click('#show-more-list-genres')
             sleep(0.1)
 
         genre_elems = driver.find_elements(by=By.CLASS_NAME, value='genre-list')

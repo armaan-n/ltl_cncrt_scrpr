@@ -60,6 +60,7 @@ def create_driver():
 
 def safe_get(thread_id, driver, wait, link, field):
     tries = 1
+    driver.open(link)
 
     while True:
         if tries % 4 == 0:
@@ -70,15 +71,11 @@ def safe_get(thread_id, driver, wait, link, field):
 
         try:
             with timeout_handler:
-                driver.open(link)
-                driver.find_elements(by=By.CLASS_NAME,
-                                     value=field)
+                driver.find_element(by=By.CLASS_NAME,
+                                    value=field)
                 break
         except:
             print(f'thread {thread_id}: failed waiting', flush=True)
-
-        driver = create_driver()
-        wait = WebDriverWait(driver, wait_time)
 
         tries += 1
 
@@ -392,13 +389,11 @@ class ConcertScraper:
 
 
 if __name__ == "__main__":
-    while True:
-        try:
-            artist_scraper = ArtistScraper()
-            threads = []
 
-            artist_scraper.scrape(1)
+    artist_scraper = ArtistScraper()
+    threads = []
 
-            s3.upload_file(f'artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
-        except Exception as e:
-            pass
+    artist_scraper.scrape(1)
+
+    s3.upload_file(f'artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
+

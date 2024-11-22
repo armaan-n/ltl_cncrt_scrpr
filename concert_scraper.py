@@ -52,6 +52,7 @@ def create_driver():
     service = Service('chromedriver-win64\\chromedriver.exe')
 
     driver = Driver(uc=True, headless2=True, page_load_strategy='none')
+    driver.maximize_window()
     driver.implicitly_wait(wait_time)
     driver.set_page_load_timeout(wait_time)
 
@@ -230,7 +231,7 @@ class ArtistScraper:
         genres = []
 
         driver.implicitly_wait(0)
-        more_geners = driver.find_elements(by=By.CLASS_NAME, value='fs-sticky-footer')
+        more_geners = driver.find_elements(by=By.ID, value='show-more-list-genres')
 
         if len(more_geners) == 1:
             more_geners[0].click()

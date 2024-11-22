@@ -143,6 +143,7 @@ class ArtistScraper:
                 break
 
             link = response['Messages'][0]['Body']
+            link = link.replace('34.201.209.209', '34.224.117.253')
             receipt_handle = response['Messages'][0]['ReceiptHandle']
 
             artist_names = []
@@ -167,7 +168,7 @@ class ArtistScraper:
             # replace the concert archive link with root IP
             for link_elem in artist_link_elems:
                 link = link_elem.get_attribute('href')
-                link = link.replace('www.concertarchives.org', '34.201.209.209')
+                link = link.replace('www.concertarchives.org', '34.224.117.253')
                 links.append(link)
 
             # for every artist link, scrape artist info

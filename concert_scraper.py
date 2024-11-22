@@ -2,6 +2,7 @@ import datetime
 import random
 from time import sleep
 
+from seleniumbase import Driver
 import psutil
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -16,6 +17,8 @@ import os
 
 client = boto3.client('sqs')
 s3 = boto3.client('s3')
+
+wait_time = 60
 
 threads = []
 init_time = datetime.datetime.now()
@@ -48,9 +51,9 @@ def create_driver():
 
     service = Service('chromedriver-win64\\chromedriver.exe')
 
-    driver = webdriver.Chrome(options=options, service=service)
-    driver.implicitly_wait(10)
-    driver.set_page_load_timeout(10)
+    driver = Driver(uc=True, headless2=True, page_load_strategy='none')
+    driver.implicitly_wait(wait_time)
+    driver.set_page_load_timeout(wait_time)
 
     return driver
 
@@ -60,22 +63,22 @@ def safe_get(thread_id, driver, wait, link, field):
 
     while True:
         if tries % 4 == 0:
-            sleep(300)
+            print('sleeping')
+            sleep(30)
 
-        timeout_handler = TimeoutHandler(10, driver)
+        timeout_handler = TimeoutHandler(wait_time, driver)
 
         try:
             with timeout_handler:
-                driver.get(link)
-                sleep(0.5)
-                wait.until(EC.visibility_of_element_located(
-                    (By.CLASS_NAME, field)))
+                driver.open(link)
+                driver.find_elements(by=By.CLASS_NAME,
+                                     value=field)
                 break
         except:
             print(f'thread {thread_id}: failed waiting', flush=True)
 
         driver = create_driver()
-        wait = WebDriverWait(driver, 10)
+        wait = WebDriverWait(driver, wait_time)
 
         tries += 1
 
@@ -129,7 +132,7 @@ class ArtistScraper:
     def scrape(self, thread_id):
         # create driver and waiter
         driver = create_driver()
-        wait = WebDriverWait(driver, 10)
+        wait = WebDriverWait(driver, wait_time)
 
         while True:
             response = client.receive_message(
@@ -143,7 +146,7 @@ class ArtistScraper:
                 break
 
             link = response['Messages'][0]['Body']
-            link = link.replace('34.201.209.209', '34.224.117.253')
+            link = link.replace('34.201.209.209', 'www.concertarchives.org')
             receipt_handle = response['Messages'][0]['ReceiptHandle']
 
             artist_names = []
@@ -168,7 +171,7 @@ class ArtistScraper:
             # replace the concert archive link with root IP
             for link_elem in artist_link_elems:
                 link = link_elem.get_attribute('href')
-                link = link.replace('www.concertarchives.org', '34.224.117.253')
+                #link = link.replace('www.concertarchives.org', '34.224.117.253')
                 links.append(link)
 
             # for every artist link, scrape artist info
@@ -237,7 +240,7 @@ class ArtistScraper:
             sleep(0.1)
 
         genre_elems = driver.find_elements(by=By.CLASS_NAME, value='genre-list')
-        driver.implicitly_wait(20)
+        driver.implicitly_wait(wait_time)
 
         for genre_elem in genre_elems:
             try:

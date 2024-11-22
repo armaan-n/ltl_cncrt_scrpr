@@ -49,7 +49,7 @@ def create_driver():
     options.add_argument("--disable-gpu")
     options.page_load_strategy = 'none'
 
-    service = Service('chromedriver-win64\\chromedriver.exe')
+    # service = Service('chromedriver-win64\\chromedriver.exe')
 
     driver = Driver(uc=True, headless2=True, page_load_strategy='none')
     driver.maximize_window()
@@ -62,8 +62,7 @@ def create_driver():
 def safe_get(thread_id, driver, wait, link, field):
     tries = 1
 
-
-    while True:
+    for i in range(10):
         timeout_handler = TimeoutHandler(wait_time, driver)
 
         try:
@@ -75,6 +74,10 @@ def safe_get(thread_id, driver, wait, link, field):
                 break
         except:
             print(f'thread {thread_id}: failed waiting', flush=True)
+
+            if i == 10:
+                sleep(300)
+                raise Exception('womp womp')
 
         tries += 1
         driver = create_driver()
@@ -137,7 +140,7 @@ class ArtistScraper:
                 QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
                 MaxNumberOfMessages=1,
                 WaitTimeSeconds=0,
-                VisibilityTimeout=900
+                VisibilityTimeout=2000
             )
 
             if 'Messages' not in response:

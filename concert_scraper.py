@@ -390,11 +390,15 @@ class ConcertScraper:
 
 
 if __name__ == "__main__":
+    while True:
+        try:
+            artist_scraper = ArtistScraper()
+            threads = []
 
-    artist_scraper = ArtistScraper()
-    threads = []
+            artist_scraper.scrape(1)
 
-    artist_scraper.scrape(1)
-
-    s3.upload_file(f'artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
+            s3.upload_file(f'artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
+        except Exception as e:
+            with open('errors.txt', 'a') as f:
+                f.write(str(e))
 

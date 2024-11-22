@@ -389,6 +389,9 @@ class ConcertScraper:
 
 
 if __name__ == "__main__":
+    with open('flag', 'w') as f:
+        f.write('flagger')
+
     while True:
         try:
             artist_scraper = ArtistScraper()

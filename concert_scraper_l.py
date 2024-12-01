@@ -73,7 +73,7 @@ def safe_get(thread_id, driver, wait, link, field):
     tries = 1
     my_wait_time = 1
 
-    while True:
+    for i in range(10):
         timeout_handler = TimeoutHandler(wait_time, driver)
 
         try:

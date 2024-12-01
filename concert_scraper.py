@@ -2,7 +2,6 @@ import datetime
 import random
 from time import sleep
 
-from seleniumbase import Driver
 import psutil
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -47,12 +46,11 @@ def create_driver():
     options.add_argument("--headless")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.page_load_strategy = 'eager'
+    options.page_load_strategy = 'none'
 
-    # service = Service('chromedriver-win64\\chromedriver.exe')
+    service = Service('chromedriver-win64\\chromedriver.exe')
 
-    driver = Driver(uc=True, headless2=True, page_load_strategy='none')
-    driver.maximize_window()
+    driver = webdriver.Chrome(options=options, service=service)
     driver.implicitly_wait(wait_time)
     driver.set_page_load_timeout(wait_time)
 
@@ -61,25 +59,26 @@ def create_driver():
 
 def safe_get(thread_id, driver, wait, link, field):
     tries = 1
+    my_wait_time = 1
 
-    for i in range(10):
+    while True:
         timeout_handler = TimeoutHandler(wait_time, driver)
 
         try:
-            driver.uc_open_with_tab(link)
-
             with timeout_handler:
-                driver.wait_for_element(f'.{field}', timeout=30)
+                driver.get(link)
+                sleep(my_wait_time)
+                wait.until(EC.visibility_of_element_located(
+                    (By.CLASS_NAME, field)))
                 break
         except:
             print(f'thread {thread_id}: failed waiting', flush=True)
 
-            if i == 10:
-                raise Exception('womp')
-
-        tries += 1
         driver = create_driver()
         wait = WebDriverWait(driver, wait_time)
+        my_wait_time += 5
+
+        tries += 1
 
     return driver, wait
 
@@ -138,14 +137,14 @@ class ArtistScraper:
                 QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
                 MaxNumberOfMessages=1,
                 WaitTimeSeconds=0,
-                VisibilityTimeout=2000
+                VisibilityTimeout=900
             )
 
             if 'Messages' not in response:
                 break
 
             link = response['Messages'][0]['Body']
-            link = link.replace('34.201.209.209', 'www.concertarchives.org')
+            link = link.replace('34.201.209.209', '54.156.215.207')
             receipt_handle = response['Messages'][0]['ReceiptHandle']
 
             artist_names = []
@@ -170,7 +169,7 @@ class ArtistScraper:
             # replace the concert archive link with root IP
             for link_elem in artist_link_elems:
                 link = link_elem.get_attribute('href')
-                #link = link.replace('www.concertarchives.org', '34.224.117.253')
+                link = link.replace('www.concertarchives.org', '34.224.117.253')
                 links.append(link)
 
             # for every artist link, scrape artist info
@@ -235,7 +234,7 @@ class ArtistScraper:
         more_geners = driver.find_elements(by=By.ID, value='show-more-list-genres')
 
         if len(more_geners) == 1:
-            driver.uc_click('#show-more-list-genres')
+            more_geners[0].click()
             sleep(0.1)
 
         genre_elems = driver.find_elements(by=By.CLASS_NAME, value='genre-list')
@@ -400,6 +399,4 @@ if __name__ == "__main__":
 
             s3.upload_file(f'artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
         except Exception as e:
-            with open('errors.txt', 'a') as f:
-                f.write(str(e))
-
+            pass

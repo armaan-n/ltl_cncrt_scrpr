@@ -59,18 +59,15 @@ def create_driver():
 
 def safe_get(thread_id, driver, wait, link, field):
     tries = 1
+    my_wait_time = 1
 
     while True:
-        if tries % 4 == 0:
-            print('sleeping')
-            sleep(30)
-
         timeout_handler = TimeoutHandler(wait_time, driver)
 
         try:
             with timeout_handler:
                 driver.get(link)
-                sleep(0.5)
+                sleep(my_wait_time)
                 wait.until(EC.visibility_of_element_located(
                     (By.CLASS_NAME, field)))
                 break
@@ -79,6 +76,7 @@ def safe_get(thread_id, driver, wait, link, field):
 
         driver = create_driver()
         wait = WebDriverWait(driver, wait_time)
+        my_wait_time += 5
 
         tries += 1
 
@@ -146,7 +144,7 @@ class ArtistScraper:
                 break
 
             link = response['Messages'][0]['Body']
-            link = link.replace('34.201.209.209', '34.224.117.253')
+            link = link.replace('34.201.209.209', '54.156.215.207')
             receipt_handle = response['Messages'][0]['ReceiptHandle']
 
             artist_names = []

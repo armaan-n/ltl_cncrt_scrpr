@@ -17,6 +17,18 @@ import os
 client = boto3.client('sqs')
 s3 = boto3.client('s3')
 
+my_ip_reponse = client.receive_message(
+    QueueUrl=os.getenv('IP_QUEUE', 'NA'),
+    MaxNumberOfMessages=1,
+    WaitTimeSeconds=0,
+    VisibilityTimeout=900
+)
+
+my_ip = my_ip_reponse['Messages'][0]['Body']
+receipt_handle = my_ip_reponse['Messages'][0]['ReceiptHandle']
+client.delete_message(QueueUrl=os.getenv('IP_QUEUE', 'NA'),
+                      ReceiptHandle=receipt_handle)
+
 wait_time = 60
 
 threads = []
@@ -144,7 +156,7 @@ class ArtistScraper:
                 break
 
             link = response['Messages'][0]['Body']
-            link = link.replace('34.201.209.209', '54.156.215.207')
+            link = link.replace('34.201.209.209', my_ip)
             receipt_handle = response['Messages'][0]['ReceiptHandle']
 
             artist_names = []
@@ -169,7 +181,7 @@ class ArtistScraper:
             # replace the concert archive link with root IP
             for link_elem in artist_link_elems:
                 link = link_elem.get_attribute('href')
-                link = link.replace('www.concertarchives.org', '34.224.117.253')
+                link = link.replace('www.concertarchives.org', my_ip)
                 links.append(link)
 
             # for every artist link, scrape artist info

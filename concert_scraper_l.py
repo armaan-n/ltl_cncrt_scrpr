@@ -101,8 +101,7 @@ def safe_get(thread_id, driver, wait, link, field):
                 wait.until(EC.visibility_of_element_located(
                     (By.CLASS_NAME, field)))
                 break
-        except:
-            failing_ip()
+        except Exception as e:
             print(f'thread {thread_id}: failed waiting', flush=True)
             tries += 1
 

@@ -42,19 +42,24 @@ sets_lock = threading.Lock()
 
 
 def get_new_ip():
-    my_ip_reponse = client.receive_message(
-        QueueUrl=os.getenv('IP_QUEUE', 'NA'),
-        MaxNumberOfMessages=1,
-        WaitTimeSeconds=0,
-        VisibilityTimeout=900
-    )
+    while True:
+        try:
+            my_ip_reponse = client.receive_message(
+                QueueUrl=os.getenv('IP_QUEUE', 'NA'),
+                MaxNumberOfMessages=1,
+                WaitTimeSeconds=0,
+                VisibilityTimeout=900
+            )
 
-    global my_ip
+            global my_ip
 
-    my_ip = my_ip_reponse['Messages'][0]['Body']
-    receipt_handle = my_ip_reponse['Messages'][0]['ReceiptHandle']
-    client.delete_message(QueueUrl=os.getenv('IP_QUEUE', 'NA'),
-                      ReceiptHandle=receipt_handle)
+            my_ip = my_ip_reponse['Messages'][0]['Body']
+            receipt_handle = my_ip_reponse['Messages'][0]['ReceiptHandle']
+            client.delete_message(QueueUrl=os.getenv('IP_QUEUE', 'NA'),
+                              ReceiptHandle=receipt_handle)
+            break
+        except Exception as e:
+            pass
 
 
 def failing_ip():
@@ -423,8 +428,6 @@ if __name__ == "__main__":
             threads = []
             get_new_ip()
             artist_scraper.scrape(1)
-
-
 
             while True:
                 try:

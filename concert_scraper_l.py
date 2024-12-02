@@ -17,6 +17,10 @@ import os
 client = boto3.client('sqs')
 s3 = boto3.client('s3')
 
+ips = ['54.156.215.207',
+       '44.211.180.203',
+       '54.226.211.34',
+       '44.204.97.76']
 my_ip = ''
 
 wait_time = 20
@@ -42,24 +46,8 @@ sets_lock = threading.Lock()
 
 
 def get_new_ip():
-    while True:
-        try:
-            my_ip_reponse = client.receive_message(
-                QueueUrl=os.getenv('IP_QUEUE', 'NA'),
-                MaxNumberOfMessages=1,
-                WaitTimeSeconds=0,
-                VisibilityTimeout=900
-            )
-
-            global my_ip
-
-            my_ip = my_ip_reponse['Messages'][0]['Body']
-            receipt_handle = my_ip_reponse['Messages'][0]['ReceiptHandle']
-            client.delete_message(QueueUrl=os.getenv('IP_QUEUE', 'NA'),
-                              ReceiptHandle=receipt_handle)
-            break
-        except Exception as e:
-            pass
+    global my_ip
+    my_ip = ips[random.randrange(0, 4)]
 
 
 def failing_ip():
@@ -90,6 +78,7 @@ def create_driver():
 def safe_get(thread_id, driver, wait, link, field):
     tries = 1
     my_wait_time = 1
+    get_new_ip()
 
     while True:
         timeout_handler = TimeoutHandler(wait_time, driver)
@@ -107,10 +96,6 @@ def safe_get(thread_id, driver, wait, link, field):
 
         driver = create_driver()
         wait = WebDriverWait(driver, wait_time)
-
-        if tries % 6 == 0:
-            failing_ip()
-            get_new_ip()
 
     return driver, wait
 
@@ -428,14 +413,6 @@ if __name__ == "__main__":
             threads = []
             get_new_ip()
             artist_scraper.scrape(1)
-
-            while True:
-                try:
-                    failing_ip()
-                    get_new_ip()
-                    break
-                except Exception as e:
-                    sleep(300)
 
         except Exception as e:
             pass

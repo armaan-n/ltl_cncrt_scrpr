@@ -409,6 +409,28 @@ if __name__ == "__main__":
 
             artist_scraper.scrape(1)
 
-            s3.upload_file(f'artist_set_{init_time}.csv', 'artistbucket777', f'artist_set_{init_time}.csv')
+            with open(f'failing_ip_{init_time}.txt', 'w') as f:
+                f.write(my_ip)
+
+            s3.upload_file(f'failing_ip_{init_time}.txt', 'artistbucket777', f'failing_ip_{init_time}.txt')
+
+            while True:
+                try:
+                    my_ip_reponse = client.receive_message(
+                        QueueUrl=os.getenv('IP_QUEUE', 'NA'),
+                        MaxNumberOfMessages=1,
+                        WaitTimeSeconds=100,
+                        VisibilityTimeout=900
+                    )
+
+                    my_ip = my_ip_reponse['Messages'][0]['Body']
+
+                    receipt_handle = my_ip_reponse['Messages'][0]['ReceiptHandle']
+                    client.delete_message(QueueUrl=os.getenv('IP_QUEUE', 'NA'),
+                                          ReceiptHandle=receipt_handle)
+                    break
+                except Exception as e:
+                    pass
+
         except Exception as e:
             pass

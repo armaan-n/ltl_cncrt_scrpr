@@ -20,7 +20,7 @@ s3 = boto3.client('s3')
 ips = ['54.156.215.207',
        '44.211.180.203',
        '54.226.211.34',
-       '44.204.97.76']
+       '34.205.28.131']
 my_ip = ''
 
 wait_time = 20
@@ -84,7 +84,11 @@ def safe_get(thread_id, driver, wait, link, field):
 
         try:
             with timeout_handler:
-                driver.get(link)
+                get_new_ip()
+                alt_link = link.replace('www.concertarchives.org', my_ip)
+                alt_link = alt_link.replace('34.201.209.209', my_ip)
+
+                driver.get(alt_link)
                 sleep(my_wait_time)
                 wait.until(EC.visibility_of_element_located(
                     (By.CLASS_NAME, field)))
@@ -92,6 +96,9 @@ def safe_get(thread_id, driver, wait, link, field):
         except Exception as e:
             print(f'thread {thread_id}: failed waiting', flush=True)
             tries += 1
+
+        if tries == 6:
+            raise Exception("not working")
 
         driver = create_driver()
         wait = WebDriverWait(driver, wait_time)
@@ -160,8 +167,8 @@ class ArtistScraper:
                 break
 
             link = response['Messages'][0]['Body']
-            get_new_ip()
-            link = link.replace('34.201.209.209', my_ip)
+
+
             receipt_handle = response['Messages'][0]['ReceiptHandle']
 
             artist_names = []
@@ -186,8 +193,8 @@ class ArtistScraper:
             # replace the concert archive link with root IP
             for link_elem in artist_link_elems:
                 link = link_elem.get_attribute('href')
-                get_new_ip()
-                link = link.replace('www.concertarchives.org', my_ip)
+
+
                 links.append(link)
 
             # for every artist link, scrape artist info

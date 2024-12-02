@@ -66,7 +66,7 @@ def failing_ip():
     with open(f'failing_ip_{init_time}.txt', 'w') as f:
         f.write(my_ip)
 
-    s3.upload_file(f'./failing_ip_{init_time}.txt', 'artistbucket777', f'./failing_ip_{init_time}.txt')
+    s3.upload_file(f'failing_ip_{init_time}.txt', 'artistbucket777', f'failing_ip_{init_time}.txt')
 
 
 def create_driver():

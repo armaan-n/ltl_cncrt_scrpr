@@ -431,6 +431,7 @@ if __name__ == "__main__":
 
             while True:
                 try:
+                    failing_ip()
                     get_new_ip()
                     break
                 except Exception as e:

@@ -92,13 +92,16 @@ def safe_get(thread_id, driver, wait, link, field):
     my_wait_time = 1
 
     while True:
+        timeout_handler = TimeoutHandler(wait_time, driver)
+
         try:
-            driver.get(link)
-            sleep(my_wait_time)
-            wait.until(EC.visibility_of_element_located(
-                (By.CLASS_NAME, field)))
-            break
-        except Exception as e:
+            with timeout_handler:
+                driver.get(link)
+                sleep(my_wait_time)
+                wait.until(EC.visibility_of_element_located(
+                    (By.CLASS_NAME, field)))
+                break
+        except:
             failing_ip()
             print(f'thread {thread_id}: failed waiting', flush=True)
             tries += 1

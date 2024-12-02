@@ -73,7 +73,7 @@ def safe_get(thread_id, driver, wait, link, field):
     tries = 1
     my_wait_time = 1
 
-    for i in range(10):
+    for i in range(5):
         timeout_handler = TimeoutHandler(wait_time, driver)
 
         try:
@@ -92,7 +92,7 @@ def safe_get(thread_id, driver, wait, link, field):
 
         tries += 1
 
-    if tries == 11:
+    if tries == 6:
         raise Exception("")
 
     return driver, wait
@@ -433,7 +433,7 @@ if __name__ == "__main__":
                                           ReceiptHandle=receipt_handle)
                     break
                 except Exception as e:
-                    pass
+                    sleep(300)
 
         except Exception as e:
             pass

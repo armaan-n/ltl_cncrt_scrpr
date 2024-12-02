@@ -78,7 +78,6 @@ def create_driver():
 def safe_get(thread_id, driver, wait, link, field):
     tries = 1
     my_wait_time = 1
-    get_new_ip()
 
     while True:
         timeout_handler = TimeoutHandler(wait_time, driver)
@@ -161,6 +160,7 @@ class ArtistScraper:
                 break
 
             link = response['Messages'][0]['Body']
+            get_new_ip()
             link = link.replace('34.201.209.209', my_ip)
             receipt_handle = response['Messages'][0]['ReceiptHandle']
 
@@ -186,6 +186,7 @@ class ArtistScraper:
             # replace the concert archive link with root IP
             for link_elem in artist_link_elems:
                 link = link_elem.get_attribute('href')
+                get_new_ip()
                 link = link.replace('www.concertarchives.org', my_ip)
                 links.append(link)
 

@@ -17,19 +17,9 @@ import os
 client = boto3.client('sqs')
 s3 = boto3.client('s3')
 
-my_ip_reponse = client.receive_message(
-    QueueUrl=os.getenv('IP_QUEUE', 'NA'),
-    MaxNumberOfMessages=1,
-    WaitTimeSeconds=0,
-    VisibilityTimeout=900
-)
+my_ip = ''
 
-my_ip = my_ip_reponse['Messages'][0]['Body']
-receipt_handle = my_ip_reponse['Messages'][0]['ReceiptHandle']
-client.delete_message(QueueUrl=os.getenv('IP_QUEUE', 'NA'),
-                      ReceiptHandle=receipt_handle)
-
-wait_time = 60
+wait_time = 20
 
 threads = []
 init_time = datetime.datetime.now()
@@ -49,6 +39,29 @@ master_set = pd.DataFrame({'artist': [],
                            'artist_id': []})
 
 sets_lock = threading.Lock()
+
+
+def get_new_ip():
+    my_ip_reponse = client.receive_message(
+        QueueUrl=os.getenv('IP_QUEUE', 'NA'),
+        MaxNumberOfMessages=1,
+        WaitTimeSeconds=0,
+        VisibilityTimeout=900
+    )
+
+    global my_ip
+
+    my_ip = my_ip_reponse['Messages'][0]['Body']
+    receipt_handle = my_ip_reponse['Messages'][0]['ReceiptHandle']
+    client.delete_message(QueueUrl=os.getenv('IP_QUEUE', 'NA'),
+                      ReceiptHandle=receipt_handle)
+
+
+def failing_ip():
+    with open(f'failing_ip_{init_time}.txt', 'w') as f:
+        f.write(my_ip)
+
+    s3.upload_file(f'failing_ip_{init_time}.txt', 'artistbucket777', f'failing_ip_{init_time}.txt')
 
 
 def create_driver():
@@ -73,7 +86,7 @@ def safe_get(thread_id, driver, wait, link, field):
     tries = 1
     my_wait_time = 1
 
-    for i in range(5):
+    while True:
         timeout_handler = TimeoutHandler(wait_time, driver)
 
         try:
@@ -85,15 +98,14 @@ def safe_get(thread_id, driver, wait, link, field):
                 break
         except:
             print(f'thread {thread_id}: failed waiting', flush=True)
+            tries += 1
 
         driver = create_driver()
         wait = WebDriverWait(driver, wait_time)
-        my_wait_time += 5
 
-        tries += 1
-
-    if tries == 6:
-        raise Exception("")
+        if tries % 6 == 0:
+            failing_ip()
+            get_new_ip()
 
     return driver, wait
 
@@ -409,28 +421,14 @@ if __name__ == "__main__":
         try:
             artist_scraper = ArtistScraper()
             threads = []
-
+            get_new_ip()
             artist_scraper.scrape(1)
 
-            with open(f'failing_ip_{init_time}.txt', 'w') as f:
-                f.write(my_ip)
 
-            s3.upload_file(f'failing_ip_{init_time}.txt', 'artistbucket777', f'failing_ip_{init_time}.txt')
 
             while True:
                 try:
-                    my_ip_reponse = client.receive_message(
-                        QueueUrl=os.getenv('IP_QUEUE', 'NA'),
-                        MaxNumberOfMessages=1,
-                        WaitTimeSeconds=100,
-                        VisibilityTimeout=900
-                    )
-
-                    my_ip = my_ip_reponse['Messages'][0]['Body']
-
-                    receipt_handle = my_ip_reponse['Messages'][0]['ReceiptHandle']
-                    client.delete_message(QueueUrl=os.getenv('IP_QUEUE', 'NA'),
-                                          ReceiptHandle=receipt_handle)
+                    get_new_ip()
                     break
                 except Exception as e:
                     sleep(300)

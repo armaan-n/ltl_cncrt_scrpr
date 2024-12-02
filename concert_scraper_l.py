@@ -92,6 +92,9 @@ def safe_get(thread_id, driver, wait, link, field):
 
         tries += 1
 
+    if tries == 11:
+        raise Exception("")
+
     return driver, wait
 
 

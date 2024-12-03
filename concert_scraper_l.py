@@ -46,7 +46,7 @@ sets_lock = threading.Lock()
 
 def get_new_ip():
     global my_ip
-    my_ip = ips[random.randrange(0, 4)]
+    my_ip = ips[random.randrange(0, len(ips))]
 
 
 def failing_ip():

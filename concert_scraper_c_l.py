@@ -13,7 +13,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 import boto3
 import os
 
-from selenium_stealth import stealth
 
 ips = ['3.236.168.117',
        '44.197.132.90',

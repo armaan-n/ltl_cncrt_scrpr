@@ -14,8 +14,6 @@ import boto3
 import os
 from selenium.webdriver.support import expected_conditions as EC
 
-from selenium_stealth import stealth
-
 ips = ['3.236.168.117',
        '44.197.132.90',
        '44.201.22.245',

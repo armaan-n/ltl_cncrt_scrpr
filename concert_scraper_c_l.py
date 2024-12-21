@@ -12,7 +12,9 @@ import threading
 from selenium.webdriver.support.ui import WebDriverWait
 import boto3
 import os
+from selenium.webdriver.support import expected_conditions as EC
 
+from selenium_stealth import stealth
 
 ips = ['3.236.168.117',
        '44.197.132.90',
@@ -113,6 +115,16 @@ def create_driver():
     driver.implicitly_wait(wait_time)
     driver.set_page_load_timeout(wait_time)
 
+    #stealth(
+    #    driver,
+    #    languages=["en-US", "en"],
+    #    vendor="Google Inc.",
+    #    platform="Win32",
+    #    webgl_vendor="Intel Inc.",
+    #    renderer="Intel Iris OpenGL Engine",
+    #    fix_hairline=True,
+    #)
+
     return driver
 
 
@@ -143,6 +155,8 @@ def safe_get(thread_id, driver, wait, link, field):
 
                 driver.get(alt_link)
                 sleep(my_wait_time)
+                wait.until(EC.visibility_of_element_located(
+                    (By.CLASS_NAME, field)))
                 break
         except Exception as e:
             print(f'thread {thread_id}: failed waiting {link}', flush=True)

@@ -1,5 +1,6 @@
 import datetime
 import random
+import sys
 from time import sleep
 
 import psutil
@@ -159,6 +160,9 @@ def safe_get(thread_id, driver, wait, link, field):
         except Exception as e:
             print(f'thread {thread_id}: failed waiting {link}', flush=True)
             tries += 1
+
+        if tries == 4:
+            os.execv(sys.argv[0], sys.argv)
 
         driver = create_driver()
         wait = WebDriverWait(driver, wait_time)

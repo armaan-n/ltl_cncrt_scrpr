@@ -44,7 +44,8 @@ master_set = pd.DataFrame({
     'city': [],
     'state': [],
     'country': [],
-    'setlist': []
+    'setlist': [],
+    'band_ids': []
 })
 
 sets_lock = threading.Lock()
@@ -192,6 +193,7 @@ class ConcertScraper:
             states = []
             countries = []
             links = []
+            band_ids = []
             setlists = []
 
             response = client.receive_message(
@@ -226,7 +228,6 @@ class ConcertScraper:
                 concert_names.append(concert_name)
                 start_dates.append(start_date)
                 end_dates.append(end_date)
-                bands.append(conc_bands)
                 venues.append(venue)
                 cities.append(city)
                 states.append(state)
@@ -238,23 +239,32 @@ class ConcertScraper:
 
                 driver.implicitly_wait(0)
                 list_elems = driver.find_elements(by=By.XPATH, value="//dl[@class='dl-horizontal']//dd//ol//li")
+                band_list_elem = driver.find_element(by=By.CLASS_NAME, value='concert-band-list').find_elements(by=By.TAG_NAME, value='a')
                 driver.implicitly_wait(wait_time)
 
                 setlist = self.scrape_setlist(list_elems)
+                conc_bands = self.scrape_bands(band_list_elem)
+                conc_band_ids = self.scrape_band_ids(band_list_elem)
+
                 setlists.append(setlist)
+                bands.append(conc_bands)
+                band_ids.append(conc_band_ids)
 
             setlist_strings = list(map(lambda l: ';'.join(l), setlists))
+            band_strings = list(map(lambda l: ';'.join(l), bands))
+            band_id_strings = list(map(lambda l: ';'.join(l), band_ids))
 
             mini_concert_set = pd.DataFrame({
                 'concert': concert_names,
                 'start_date': start_dates,
                 'end_date': end_dates,
-                'bands': bands,
+                'bands': band_strings,
                 'venue': venues,
                 'city': cities,
                 'state': states,
                 'country': countries,
-                'setlist': setlist_strings
+                'setlist': setlist_strings,
+                'band_ids': band_id_strings
             })
 
             client.delete_message(QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
@@ -273,6 +283,22 @@ class ConcertScraper:
             sets.append(elem.text)
 
         return sets
+
+    def scrape_bands(self, band_list_elem):
+        bands = []
+
+        for elem in band_list_elem:
+            bands.append(elem.text)
+
+        return bands
+
+    def scrape_band_ids(self, band_list_elem):
+        bands_ids = []
+
+        for elem in band_list_elem:
+            bands_ids.append(elem.get_attribute('href').split('/')[-1])
+
+        return bands_ids
 
     def scrape_concert_name(self, concert_elems):
         concert_name = concert_elems[1].find_element(by=By.TAG_NAME,

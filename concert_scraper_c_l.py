@@ -200,7 +200,7 @@ class ConcertScraper:
                 QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
                 MaxNumberOfMessages=1,
                 WaitTimeSeconds=0,
-                VisibilityTimeout=10
+                VisibilityTimeout=900
             )
 
             if 'Messages' not in response:

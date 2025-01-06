@@ -237,7 +237,7 @@ class ConcertScraper:
                 links.append(link)
 
             for link in links:
-                safe_get(thread_id, driver, wait, link, 'profile-display')
+                safe_get(thread_id, driver, wait, link, 'application-main-heading')
 
                 driver.implicitly_wait(0)
                 list_elems = driver.find_elements(by=By.XPATH, value="//dl[@class='dl-horizontal']//dd//ol//li")

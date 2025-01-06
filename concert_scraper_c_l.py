@@ -16,12 +16,10 @@ import os
 from selenium.webdriver.support import expected_conditions as EC
 
 ips = ['3.220.167.184',
-       '3.228.108.118',
        '3.236.168.117',
        '44.197.132.90',
        '44.198.56.216',
        '44.201.22.245',
-       '52.45.116.70',
        '54.160.10.205',
        ]
 

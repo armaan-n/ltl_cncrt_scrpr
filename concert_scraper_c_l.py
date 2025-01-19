@@ -111,7 +111,7 @@ def create_driver():
 
     service = Service('chromedriver-linux64/chromedriver-linux64/chromedriver')
 
-    driver = webdriver.Chrome(options=options, service=service)
+    driver = webdriver.Chrome(options=options)
     driver.implicitly_wait(wait_time)
     driver.set_page_load_timeout(wait_time)
 

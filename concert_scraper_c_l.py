@@ -206,8 +206,15 @@ class ConcertScraper:
             if 'Messages' not in response:
                 break
 
+            receive_count = int(response['Messages'][0]['Attributes']['ApproximateReceiveCount'])
+
             city, state, country, link = response['Messages'][0]['Body'].split(',')
             receipt_handle = response['Messages'][0]['ReceiptHandle']
+
+            if receive_count > 5:
+                client.delete_message(QueueUrl=os.getenv('AWS_QUEUE_PATH', 'NA'),
+                                      ReceiptHandle=receipt_handle)
+                continue
 
             driver, wait = safe_get(thread_id, driver, wait, link, 'table-responsive')
 

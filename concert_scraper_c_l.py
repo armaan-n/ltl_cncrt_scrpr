@@ -147,7 +147,7 @@ def safe_get(thread_id, driver, wait, link, field):
                     '44.201.22.245',
                     '3.220.167.184',
                     '54.160.10.205',
-                    '44.198.56.216'
+                    '52.207.69.203'
                 ]
 
                 for ip in for_ips:

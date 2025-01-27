@@ -52,7 +52,7 @@ sets_lock = threading.Lock()
 
 my_ip = ''
 
-wait_time = 10
+wait_time = 15
 
 
 class TimeoutHandler:

@@ -230,19 +230,22 @@ class ConcertScraper:
                 pass
 
             for concert_elem in concert_list_elems:
-                concert_elems = concert_elem.find_elements(by=By.TAG_NAME,
-                                                           value='td')
+                try:
+                    concert_elems = concert_elem.find_elements(by=By.TAG_NAME,
+                                                               value='td')
 
-                concert_name, start_date, end_date, conc_bands, venue, _, _, _, link = self.scrape_concerts(
-                    concert_elems, driver)
-                concert_names.append(concert_name)
-                start_dates.append(start_date)
-                end_dates.append(end_date)
-                venues.append(venue)
-                cities.append(city)
-                states.append(state)
-                countries.append(country)
-                links.append(link)
+                    concert_name, start_date, end_date, conc_bands, venue, _, _, _, link = self.scrape_concerts(
+                        concert_elems, driver)
+                    concert_names.append(concert_name)
+                    start_dates.append(start_date)
+                    end_dates.append(end_date)
+                    venues.append(venue)
+                    cities.append(city)
+                    states.append(state)
+                    countries.append(country)
+                    links.append(link)
+                except Exception as e:
+                    break
 
             for link in links:
                 driver, wait = safe_get(thread_id, driver, wait, link, 'main-bnr')

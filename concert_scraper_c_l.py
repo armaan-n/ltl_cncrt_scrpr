@@ -251,7 +251,7 @@ class ConcertScraper:
                 driver, wait = safe_get(thread_id, driver, wait, link, 'main-bnr')
 
                 driver.implicitly_wait(0)
-                list_elems = driver.find_elements(by=By.XPATH, value="//dl[@class='dl-horizontal']//dd//ol//li")
+                list_elems = driver.find_elements(by=By.XPATH, value="//div[@class='setlists-wrapper']//dd//ol//li")
                 band_list_elem = driver.find_element(by=By.CLASS_NAME, value='concert-band-list').find_elements(by=By.TAG_NAME, value='a')
                 driver.implicitly_wait(wait_time)
 
